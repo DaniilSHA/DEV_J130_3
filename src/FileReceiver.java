@@ -8,8 +8,8 @@ public class FileReceiver extends Thread {
     public static final int PORT = 34567;
 
     private final Socket socket;
-    private PrintWriter fileWriter;
-    private Scanner socketInput;
+    private OutputStream fileWriter;
+    private InputStream socketInput;
     private File currentFile;
 
     public FileReceiver(Socket socket) {
@@ -20,16 +20,19 @@ public class FileReceiver extends Thread {
     @Override
     public void run() {
         try {
-            socketInput = new Scanner(socket.getInputStream());
-            String fileName = socketInput.nextLine();
+            socketInput = socket.getInputStream();
+            ObjectInputStream receivingFile = new ObjectInputStream(socketInput);
+            String fileName = ((File)receivingFile.readObject()).getName();
             createNewFile(fileName);
             synchronized (socket) {
-                while (socketInput.hasNext()) {
-                    fileWriter.println(socketInput.nextLine());
+                byte[] buffer = new byte[1024];
+                int lineSize;
+                while ((lineSize=socketInput.read(buffer))>0) {
+                    fileWriter.write(buffer,0,lineSize);
                 }
                 System.out.println("Фаил:" + currentFile.getName() + " был успешно загружен в потоке: " + Thread.currentThread().getName());
             }
-        } catch (IOException e) {
+        } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         } finally {
             try {
@@ -46,7 +49,7 @@ public class FileReceiver extends Thread {
         fileName = "ReceivingFiles" + File.separator + fileName;
         currentFile = new File(fileName);
         if (!currentFile.exists()) currentFile.createNewFile();
-        fileWriter = new PrintWriter(new FileWriter(currentFile), true);
+        fileWriter = new FileOutputStream(currentFile);
     }
 
     public static void main(String[] args) {

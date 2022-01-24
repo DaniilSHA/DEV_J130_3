@@ -17,11 +17,14 @@ public class FileSender extends Thread {
     @Override
     public void run() {
         try (Socket socket = new Socket(InetAddress.getLocalHost(), FileReceiver.PORT);
-             Scanner scanner = new Scanner(new FileInputStream(fileName));
-             PrintWriter socketWriter = new PrintWriter(socket.getOutputStream(), true) ) {
-            socketWriter.println(fileName.getName());
-            while (scanner.hasNext()) {
-                socketWriter.println(scanner.nextLine());
+             FileInputStream input = new FileInputStream(fileName);
+             OutputStream output = socket.getOutputStream();
+             ObjectOutputStream sendingFile = new ObjectOutputStream(output)) {
+            sendingFile.writeObject(fileName);
+            byte[] buffer = new byte[1024];
+            int lineSize;
+            while ((lineSize=input.read(buffer))>0) {
+                output.write(buffer,0,lineSize);
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -32,5 +35,6 @@ public class FileSender extends Thread {
         new FileSender("SendingFiles" + File.separator + "test1.txt").start();
         new FileSender("SendingFiles" + File.separator + "test2.txt").start();
         new FileSender("SendingFiles" + File.separator + "test3.txt").start();
+        new FileSender("SendingFiles" + File.separator + "table-of-irregular-verbs.pdf").start();
     }
 }
